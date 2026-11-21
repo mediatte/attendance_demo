@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>출석체크 // 시스템 98</title>
+  <style>
+    :root {
+      --steel: #c0c0c0;
+      --steel-light: #dfdfdf;
+      --steel-dark: #808080;
+      --deep-dark: #404040;
+      --blue: #000080;
+      --teal: #008080;
+      --green: #008000;
+      --red: #800000;
+      --black: #000;
+      --white: #fff;
+      --font: "Tahoma", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px;
+      color: var(--black);
+      background:
+        linear-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+        #8d8d8d;
+      background-size: 4px 4px;
+      font-family: var(--font);
+      image-rendering: pixelated;
+    }
+
+    button { font-family: var(--font); }
+
+    .app {
+      width: min(960px, 100%);
+      margin: 0 auto;
+      border-top: 2px solid #fff;
+      border-left: 2px solid #fff;
+      border-right: 2px solid #404040;
+      border-bottom: 2px solid #404040;
+      background: var(--steel);
+      box-shadow:
+        12px 12px 0 rgba(32, 32, 32, 0.28),
+        inset 1px 1px 0 #dfdfdf,
+        inset -1px -1px 0 #808080;
+    }
+
+    .titlebar {
+      display: flex;
+      height: 36px;
+      margin: 3px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 5px 4px 9px;
+      color: var(--white);
+      background:
+        repeating-linear-gradient(
+          90deg,
+          #000080 0,
+          #000080 2px,
+          #000066 2px,
+          #000066 4px
+        );
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .title-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-shadow: 1px 1px 0 #000;
+    }
+
+    .title-icon {
+      display: grid;
+      width: 20px;
+      height: 20px;
+      place-items: center;
+      border: 1px solid #fff;
+      background: var(--teal);
+      font-size: 12px;
+      box-shadow: inset -1px -1px 0 #004040;
+    }
+
+    .window-controls {
+      display: flex;
+      gap: 3px;
+    }
+
+    .window-control {
+      display: grid;
+      width: 24px;
+      height: 22px;
+      place-items: center;
+      border: 0;
+      border-top: 2px solid #fff;
+      border-left: 2px solid #fff;
+      border-right: 2px solid #404040;
+      border-bottom: 2px solid #404040;
+      color: #000;
+      background: var(--steel);
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1;
+      cursor: default;
+    }
+
+    .menu-bar {
+      height: 27px;
+      margin: 0 3px;
+      padding: 4px 7px;
+      border-top: 1px solid #808080;
+      border-bottom: 1px solid #fff;
+      font-size: 12px;
+    }
+
+    .menu-bar span { margin-right: 18px; }
+    .menu-bar span::first-letter { text-decoration: underline; }
+
+    .app-body {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.85fr);
+      gap: 10px;
+      padding: 10px;
+    }
+
+    .panel {
+      border-top: 2px solid #808080;
+      border-left: 2px solid #808080;
+      border-right: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      background: var(--steel);
+    }
+
+    .calendar-card {
+      padding: 10px;
+    }
+
+    .calendar-heading {
+      display: flex;
+      min-height: 48px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 9px;
+      padding: 7px 8px;
+      border-top: 1px solid #808080;
+      border-left: 1px solid #808080;
+      border-right: 1px solid #fff;
+      border-bottom: 1px solid #fff;
+      background: #b4b4b4;
+    }
+
+    .calendar-heading h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: -1px;
+    }
+
+    .month-controls {
+      display: flex;
+      gap: 5px;
+    }
+
+    .win98-button,
+    .icon-button,
+    .checkin-button {
+      border-top: 2px solid #fff;
+      border-left: 2px solid #fff;
+      border-right: 2px solid #404040;
+      border-bottom: 2px solid #404040;
+      color: #000;
+      background: var(--steel);
+      box-shadow: inset -1px -1px 0 #808080;
+      cursor: pointer;
+    }
+
+    .win98-button:active,
+    .icon-button:active,
+    .checkin-button:active:not(:disabled) {
+      border-top: 2px solid #404040;
+      border-left: 2px solid #404040;
+      border-right: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      box-shadow: inset 1px 1px 0 #808080;
+      padding: 2px 0 0 2px;
+    }
+
+    .icon-button {
+      width: 36px;
+      height: 34px;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .weekdays,
+    .days {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      text-align: center;
+    }
+
+    .weekdays {
+      margin-bottom: 4px;
+      border: 1px solid #808080;
+      background: #a8a8a8;
+    }
+
+    .weekday {
+      padding: 5px 0;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .weekday:first-child { color: #800000; }
+    .weekday:last-child { color: #000080; }
+
+    .days {
+      min-height: 360px;
+      border-top: 1px solid #808080;
+      border-left: 1px solid #808080;
+      border-right: 1px solid #fff;
+      border-bottom: 1px solid #fff;
+      background: #f0f0f0;
+    }
+
+    .day {
+      position: relative;
+      display: flex;
+      min-width: 0;
+      min-height: 58px;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-top: 1px solid #d8d8d8;
+      border-left: 1px solid #d8d8d8;
+      border-right: 1px solid #808080;
+      border-bottom: 1px solid #808080;
+      color: #000;
+      background: #dcdcdc;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .day:hover:not(:disabled) { background: #e9e9e9; }
+    .day:disabled { cursor: default; color: #8a8a8a; }
+
+    .day-number {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+    }
+
+    .day.outside {
+      color: #777;
+      background:
+        repeating-linear-gradient(
+          45deg,
+          #d2d2d2,
+          #d2d2d2 3px,
+          #c9c9c9 3px,
+          #c9c9c9 6px
+        );
+    }
+
+    .day.today {
+      outline: 2px dotted #000;
+      outline-offset: -4px;
+    }
+
+    .day.selected {
+      background: #c5c5c5;
+    }
+
+    .day.checked {
+      background: #d0d8cf;
+    }
+
+    .day.checked .day-number {
+      border: 2px solid #fff;
+      border-right-color: #404040;
+      border-bottom-color: #404040;
+      color: #fff;
+      background: var(--green);
+      font-weight: 800;
+    }
+
+    .day-dot {
+      position: absolute;
+      right: 5px;
+      bottom: 5px;
+      width: 7px;
+      height: 7px;
+      border: 1px solid #004000;
+      background: #00aa00;
+    }
+
+    .calendar-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 8px;
+      padding: 7px 8px;
+      border-top: 1px solid #808080;
+      border-left: 1px solid #808080;
+      border-right: 1px solid #fff;
+      border-bottom: 1px solid #fff;
+      font-size: 11px;
+    }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border: 1px solid #004000;
+      background: #008000;
+    }
+
+    .side-column {
+      display: grid;
+      align-content: start;
+      gap: 10px;
+    }
+
+    .checkin-card {
+      padding: 10px;
+      border: 2px solid #808080;
+      background: #c0c0c0;
+    }
+
+    .checkin-banner {
+      position: relative;
+      min-height: 112px;
+      padding: 13px;
+      overflow: hidden;
+      border: 2px solid #404040;
+      color: #fff;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          #000080,
+          #000080 2px,
+          #000066 2px,
+          #000066 4px
+        );
+    }
+
+    .checkin-banner::after {
+      content: "98";
+      position: absolute;
+      right: 8px;
+      bottom: -15px;
+      color: rgba(255, 255, 255, 0.12);
+      font-family: Impact, sans-serif;
+      font-size: 72px;
+      transform: rotate(-7deg);
+    }
+
+    .checkin-card .eyebrow {
+      position: relative;
+      z-index: 1;
+      margin: 0 0 8px;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .checkin-card h2 {
+      position: relative;
+      z-index: 1;
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.25;
+      text-shadow: 1px 1px 0 #000;
+    }
+
+    .checkin-card .message {
+      position: relative;
+      z-index: 1;
+      margin: 8px 0 0;
+      color: #dedede;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .checkin-button {
+      width: calc(100% - 20px);
+      min-height: 38px;
+      margin: 10px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .checkin-button:disabled {
+      color: #5f5f5f;
+      text-shadow: 1px 1px 0 #fff;
+      cursor: default;
+    }
+
+    .stats-card {
+      padding: 10px;
+    }
+
+    .section-header {
+      margin: -10px -10px 8px;
+      padding: 6px 8px;
+      border-bottom: 1px solid #808080;
+      background: #a7a7a7;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .stat {
+      min-height: 73px;
+      padding: 8px;
+      border-top: 2px solid #808080;
+      border-left: 2px solid #808080;
+      border-right: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      background: #d4d4d4;
+    }
+
+    .stat-label {
+      display: block;
+      margin-bottom: 7px;
+      color: #333;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .stat-value {
+      font-family: "Courier New", monospace;
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .stat-unit {
+      margin-left: 4px;
+      font-size: 10px;
+    }
+
+    .selected-info {
+      min-height: 82px;
+      padding: 10px;
+    }
+
+    .selected-info .eyebrow {
+      margin: 0 0 6px;
+      color: #555;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .selected-info p:last-child {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.6;
+    }
+
+    .status-bar {
+      display: grid;
+      grid-template-columns: 1fr 170px;
+      gap: 4px;
+      height: 30px;
+      margin: 0 3px 3px;
+      padding: 3px;
+      border-top: 1px solid #808080;
+    }
+
+    .status-cell {
+      display: flex;
+      align-items: center;
+      padding: 0 7px;
+      border-top: 1px solid #808080;
+      border-left: 1px solid #808080;
+      border-right: 1px solid #fff;
+      border-bottom: 1px solid #fff;
+      font-size: 10px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 10;
+      max-width: calc(100% - 40px);
+      padding: 10px 14px;
+      border-top: 2px solid #fff;
+      border-left: 2px solid #fff;
+      border-right: 2px solid #404040;
+      border-bottom: 2px solid #404040;
+      background: #ffffcc;
+      box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.25);
+      font-size: 12px;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: 150ms ease;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 720px) {
+      body { padding: 10px; }
+      .app { box-shadow: 6px 6px 0 rgba(32, 32, 32, 0.28); }
+      .app-body { grid-template-columns: 1fr; }
+      .days { min-height: 330px; }
+      .day { min-height: 52px; }
+      .side-column { grid-template-columns: 1fr 1fr; }
+      .selected-info { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 430px) {
+      .menu-bar { display: none; }
+      .titlebar { height: 34px; }
+      .app-body { padding: 6px; }
+      .calendar-card { padding: 6px; }
+      .calendar-heading h1 { font-size: 17px; }
+      .icon-button { width: 32px; }
+      .days { min-height: 300px; }
+      .day { min-height: 48px; }
+      .day-number { width: 27px; height: 27px; }
+      .calendar-footer { align-items: flex-start; flex-direction: column; }
+      .side-column { grid-template-columns: 1fr; }
+      .selected-info { grid-column: auto; }
+      .status-bar { grid-template-columns: 1fr 90px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="titlebar">
+      <div class="title-name">
+        <span class="title-icon">✓</span>
+        <span>출석체크.EXE</span>
+      </div>
+      <div class="window-controls" aria-hidden="true">
+        <span class="window-control">_</span>
+        <span class="window-control">□</span>
+        <span class="window-control">×</span>
+      </div>
+    </header>
+
+    <nav class="menu-bar" aria-label="메뉴">
+      <span>파일</span>
+      <span>편집</span>
+      <span>보기</span>
+      <span>도움말</span>
+    </nav>
+
+    <div class="app-body">
+      <section class="panel calendar-card" aria-label="출석 달력">
+        <div class="calendar-heading">
+          <h1 id="monthTitle"></h1>
+          <div class="month-controls">
+            <button class="icon-button" id="prevMonth" aria-label="이전 달">‹</button>
+            <button class="icon-button" id="nextMonth" aria-label="다음 달">›</button>
+          </div>
+        </div>
+
+        <div class="weekdays" aria-hidden="true">
+          <div class="weekday">일</div>
+          <div class="weekday">월</div>
+          <div class="weekday">화</div>
+          <div class="weekday">수</div>
+          <div class="weekday">목</div>
+          <div class="weekday">금</div>
+          <div class="weekday">토</div>
+        </div>
+        <div class="days" id="calendarDays"></div>
+
+        <div class="calendar-footer">
+          <span class="legend"><span class="legend-dot"></span> 출석 완료</span>
+          <span id="todayLabel"></span>
+        </div>
+      </section>
+
+      <aside class="side-column">
+        <section class="panel checkin-card">
+          <div class="checkin-banner">
+            <p class="eyebrow">SYSTEM MESSAGE</p>
+            <h2 id="checkinTitle">출석할 준비됐나요?</h2>
+            <p class="message" id="checkinMessage">오늘의 출석을 기록합니다.</p>
+          </div>
+          <button class="checkin-button" id="checkinButton">[ 오늘 출석하기 ]</button>
+        </section>
+
+        <section class="panel stats-card">
+          <div class="section-header">나의 출석 기록</div>
+          <div class="stats-grid">
+            <div class="stat">
+              <span class="stat-label">이번 달</span>
+              <span class="stat-value" id="monthCount">0</span><span class="stat-unit">일</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">전체 출석</span>
+              <span class="stat-value" id="totalCount">0</span><span class="stat-unit">일</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">연속 출석</span>
+              <span class="stat-value" id="streakCount">0</span><span class="stat-unit">일</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">월 출석률</span>
+              <span class="stat-value" id="attendanceRate">0</span><span class="stat-unit">%</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel selected-info" aria-live="polite">
+          <p class="eyebrow">선택한 날짜</p>
+          <p id="selectedInfo"></p>
+        </section>
+      </aside>
+    </div>
+
+    <footer class="status-bar">
+      <div class="status-cell" id="statusText">출석체크 시스템 준비 완료</div>
+      <div class="status-cell">LOCAL STORAGE</div>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = "today-attendance-v1";
+      const today = new Date();
+      const todayKey = toKey(today);
+      let viewYear = today.getFullYear();
+      let viewMonth = today.getMonth();
+      let selectedKey = todayKey;
+      let attendance = loadAttendance();
+      let toastTimer;
+
+      const $ = (id) => document.getElementById(id);
+
+      function toKey(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      }
+
+      function fromKey(key) {
+        const [year, month, day] = key.split("-").map(Number);
+        return new Date(year, month - 1, day);
+      }
+
+      function loadAttendance() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+          return new Set(Array.isArray(saved) ? saved : []);
+        } catch {
+          return new Set();
+        }
+      }
+
+      function saveAttendance() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([...attendance]));
+      }
+
+      function formatDate(date, options = {}) {
+        return new Intl.DateTimeFormat("ko-KR", options).format(date);
+      }
+
+      function renderCalendar() {
+        $("monthTitle").textContent = `${viewYear}년 ${viewMonth + 1}월`;
+        const firstDay = new Date(viewYear, viewMonth, 1);
+        const startOffset = firstDay.getDay();
+        const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+        const previousMonthDays = new Date(viewYear, viewMonth, 0).getDate();
+        const cells = [];
+
+        for (let i = 0; i < 42; i++) {
+          let date;
+          let outside = false;
+
+          if (i < startOffset) {
+            date = new Date(viewYear, viewMonth - 1, previousMonthDays - startOffset + i + 1);
+            outside = true;
+          } else if (i >= startOffset + daysInMonth) {
+            date = new Date(viewYear, viewMonth + 1, i - startOffset - daysInMonth + 1);
+            outside = true;
+          } else {
+            date = new Date(viewYear, viewMonth, i - startOffset + 1);
+          }
+
+          const key = toKey(date);
+          const isToday = key === todayKey;
+          const isChecked = attendance.has(key);
+          const isFuture = key > todayKey;
+          const classes = [
+            "day",
+            outside ? "outside" : "",
+            isToday ? "today" : "",
+            isChecked ? "checked" : "",
+            key === selectedKey ? "selected" : ""
+          ].filter(Boolean).join(" ");
+
+          cells.push(`
+            <button
+              class="${classes}"
+              type="button"
+              data-date="${key}"
+              aria-label="${formatDate(date, { year: "numeric", month: "long", day: "numeric" })}${isChecked ? ", 출석 완료" : ""}${isToday ? ", 오늘" : ""}"
+              aria-pressed="${key === selectedKey}"
+              ${isFuture ? "disabled" : ""}
+            >
+              <span class="day-number">${date.getDate()}</span>
+              ${isChecked ? '<span class="day-dot" aria-hidden="true"></span>' : ""}
+            </button>
+          `);
+        }
+
+        $("calendarDays").innerHTML = cells.join("");
+        $("calendarDays").querySelectorAll(".day:not(:disabled)").forEach((button) => {
+          button.addEventListener("click", () => {
+            selectedKey = button.dataset.date;
+            renderCalendar();
+            renderSelectedInfo();
+          });
+        });
+      }
+
+      function getStreak() {
+        let cursor = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        if (!attendance.has(toKey(cursor))) cursor.setDate(cursor.getDate() - 1);
+
+        let streak = 0;
+        while (attendance.has(toKey(cursor))) {
+          streak++;
+          cursor.setDate(cursor.getDate() - 1);
+        }
+        return streak;
+      }
+
+      function renderStats() {
+        const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-`;
+        const monthCount = [...attendance].filter((key) => key.startsWith(monthPrefix)).length;
+        const daysPassed =
+          viewYear === today.getFullYear() && viewMonth === today.getMonth()
+            ? today.getDate()
+            : viewYear < today.getFullYear() ||
+              (viewYear === today.getFullYear() && viewMonth < today.getMonth())
+              ? new Date(viewYear, viewMonth + 1, 0).getDate()
+              : 0;
+
+        $("monthCount").textContent = monthCount;
+        $("totalCount").textContent = attendance.size;
+        $("streakCount").textContent = getStreak();
+        $("attendanceRate").textContent = daysPassed
+          ? Math.round((monthCount / daysPassed) * 100)
+          : 0;
+      }
+
+      function renderSelectedInfo() {
+        const date = fromKey(selectedKey);
+        const checked = attendance.has(selectedKey);
+        const isFuture = selectedKey > todayKey;
+        const status = checked
+          ? "✓ 출석 기록 확인됨"
+          : isFuture
+            ? "— 접근할 수 없는 미래 날짜"
+            : "— 출석 기록 없음";
+
+        $("selectedInfo").textContent =
+          `${formatDate(date, { year: "numeric", month: "long", day: "numeric", weekday: "long" })}\n${status}`;
+      }
+
+      function renderCheckin() {
+        const checked = attendance.has(todayKey);
+        $("checkinTitle").textContent = checked ? "출석 완료" : "출석 대기 중";
+        $("checkinMessage").textContent = checked
+          ? "오늘의 출석이 정상 처리되었습니다."
+          : "버튼을 눌러 오늘의 출석을 기록하세요.";
+        $("checkinButton").textContent = checked ? "[ 출석 완료 ✓ ]" : "[ 오늘 출석하기 ]";
+        $("checkinButton").disabled = checked;
+      }
+
+      function render() {
+        $("todayLabel").textContent = formatDate(today, {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          weekday: "long"
+        });
+        renderCalendar();
+        renderStats();
+        renderSelectedInfo();
+        renderCheckin();
+      }
+
+      function showToast(message) {
+        const toast = $("toast");
+        toast.textContent = message;
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 2400);
+      }
+
+      $("prevMonth").addEventListener("click", () => {
+        viewMonth--;
+        if (viewMonth < 0) {
+          viewMonth = 11;
+          viewYear--;
+        }
+        render();
+        $("statusText").textContent = `${viewYear}년 ${viewMonth + 1}월 보기`;
+      });
+
+      $("nextMonth").addEventListener("click", () => {
+        const next = new Date(viewYear, viewMonth + 1, 1);
+        if (next > new Date(today.getFullYear(), today.getMonth(), 1)) return;
+        viewMonth = next.getMonth();
+        viewYear = next.getFullYear();
+        render();
+        $("statusText").textContent = `${viewYear}년 ${viewMonth + 1}월 보기`;
+      });
+
+      $("checkinButton").addEventListener("click", () => {
+        if (attendance.has(todayKey)) return;
+        attendance.add(todayKey);
+        selectedKey = todayKey;
+        saveAttendance();
+        render();
+        $("statusText").textContent = "출석 기록 저장 완료";
+        showToast("오늘의 출석이 기록되었습니다.");
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
